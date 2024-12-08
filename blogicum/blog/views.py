@@ -1,70 +1,56 @@
 from django.shortcuts import render
+from django.utils import timezone
 
-posts = [
-    {
-        'id': 0,
-        'location': 'Остров отчаянья',
-        'date': '30 сентября 1659 года',
-        'category': 'travel',
-        'text': '''Наш корабль, застигнутый в открытом море
-                страшным штормом, потерпел крушение.
-                Весь экипаж, кроме меня, утонул; я же,
-                несчастный Робинзон Крузо, был выброшен
-                полумёртвым на берег этого проклятого острова,
-                который назвал островом Отчаяния.''',
-    },
-    {
-        'id': 1,
-        'location': 'Остров отчаянья',
-        'date': '1 октября 1659 года',
-        'category': 'not-my-day',
-        'text': '''Проснувшись поутру, я увидел, что наш корабль сняло
-                с мели приливом и пригнало гораздо ближе к берегу.
-                Это подало мне надежду, что, когда ветер стихнет,
-                мне удастся добраться до корабля и запастись едой и
-                другими необходимыми вещами. Я немного приободрился,
-                хотя печаль о погибших товарищах не покидала меня.
-                Мне всё думалось, что, останься мы на корабле, мы
-                непременно спаслись бы. Теперь из его обломков мы могли бы
-                построить баркас, на котором и выбрались бы из этого
-                гиблого места.''',
-    },
-    {
-        'id': 2,
-        'location': 'Остров отчаянья',
-        'date': '25 октября 1659 года',
-        'category': 'not-my-day',
-        'text': '''Всю ночь и весь день шёл дождь и дул сильный
-                порывистый ветер. 25 октября.  Корабль за ночь разбило
-                в щепки; на том месте, где он стоял, торчат какие-то
-                жалкие обломки,  да и те видны только во время отлива.
-                Весь этот день я хлопотал  около вещей: укрывал и
-                укутывал их, чтобы не испортились от дождя.''',
-    },
-]
-posts_by_id = {i["id"]: i for i in posts}
+from .models import Post, Category
 
 
 def index(request):
     template = 'blog/index.html'
-    context = {'posts': posts[::-1]}
+    posts = [i for i in Post.objects.filter(
+        is_published=True,
+        category__is_published=True,
+        pub_date__lte=timezone.now()
+    )[:5]]
+    # print(posts[0].author)
+    # print([str(post.author) + " : " + post.text[:32] for post in posts])
+    context = {'post_list': posts[::-1]}
     return render(request, template, context)
 
 
 def post_detail(request, id):
     template = 'blog/detail.html'
-    if id in posts_by_id:
-        context = {'post': posts_by_id[id]}
-        return render(request, template, context)
-    else:
-        return render(request, "errors/404.html",
-                      status=404, context={"details": f"Не найден пост {id}."})
+    try:
+        if post := Post.objects.get(
+                pk=id,
+                is_published=True,
+                pub_date__lte=timezone.now(),
+                category__is_published=True
+        ):
+            context = {'post': post}
+            return render(request, template, context)
+    except Exception:
+        pass
+
+    return render(request, "errors/404.html",
+                  status=404, context={"details": f"Не найден пост {id}."})
 
 
 def category_posts(request, category_slug):
     template = 'blog/category.html'
     context = {
-        'posts': [i for i in posts if i["category"] == category_slug],
+        'post_list': [i for i in Post.objects.filter(
+            category__slug=category_slug,
+            is_published=True,
+            pub_date__lte=timezone.now()
+        )],
         'category': category_slug,
     }
+    if not context['post_list'] or not Category.objects.filter(
+            slug=category_slug,
+            is_published=True).exists():
+        return render(
+            request,
+            "errors/404.html",
+            status=404,
+            context={"details": f"Не найда категория {category_slug}."})
     return render(request, template, context)
