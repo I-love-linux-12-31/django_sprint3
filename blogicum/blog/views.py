@@ -28,7 +28,8 @@ def post_detail(request, id):
         ):
             context = {'post': post}
             return render(request, template, context)
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     return render(request, "errors/404.html",
@@ -37,20 +38,27 @@ def post_detail(request, id):
 
 def category_posts(request, category_slug):
     template = 'blog/category.html'
-    context = {
-        'post_list': [i for i in Post.objects.filter(
-            category__slug=category_slug,
-            is_published=True,
-            pub_date__lte=timezone.now()
-        )],
-        'category': category_slug,
-    }
-    if not context['post_list'] or not Category.objects.filter(
+    try:
+        category = Category.objects.get(
             slug=category_slug,
-            is_published=True).exists():
-        return render(
-            request,
-            "errors/404.html",
-            status=404,
-            context={"details": f"Не найда категория {category_slug}."})
-    return render(request, template, context)
+            is_published=True
+        )
+        context = {
+            'post_list': [i for i in Post.objects.filter(
+                category=category,
+                is_published=True,
+                pub_date__lte=timezone.now()
+            )],
+            'category': category_slug,
+        }
+        if context['post_list']:
+            return render(request, template, context)
+    except Exception:
+        pass
+
+    return render(
+        request,
+        "errors/404.html",
+        status=404,
+        context={"details": f"Не найда категория {category_slug}."}
+    )

@@ -26,6 +26,9 @@ class Category(models.Model):
         verbose_name='Добавлено'
     )
 
+    def __str__(self):
+        return f"{self.slug}: {self.title}: {self.description[:32]}"
+
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
@@ -46,6 +49,9 @@ class Location(models.Model):
         # null=False
         verbose_name='Добавлено'
     )
+
+    def __str__(self):
+        return f"{self.name}"
 
     class Meta:
         verbose_name = 'местоположение'
@@ -99,6 +105,9 @@ class Post(models.Model):
         verbose_name='Добавлено'
     )
     # , blank=False, null=False
+
+    def __str__(self):
+        return f"{self.title} : {self.text[:32]} by {self.author}"
 
     class Meta:
         verbose_name = 'публикация'
